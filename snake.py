@@ -8,45 +8,54 @@ class Snake:
 
     ATTRIBUTES:
 
-        body :            list containing the position of each individual block of the snake
-        CELL_WIDTH :      length of an individual square of the grid
-        block_size :      length of an individual block of the snake (with respect to CELL_WIDTH)
-        direction :       current direction of the snake head
-        new_direction :   next direction of the snake head (provided by the user)
-        directions :      list of current directions for every snake's body piece
-        increase_body :   boolean to know whether increase the snake body or not
-        new_block :       stores the position where to insert the new body block
-        new_block_move :  boolean to know when to start moving new_block
-        snake_color :     snake color
-        step :            number of steps needed to move from one square to another
-        iterations : 
-        EYES :            image to display the snake eyes
-        hit_sound :       game sound
-        eating_sound :    game sound
+        body :                  list containing the position of each individual block of the snake
+        CELL_WIDTH :            length of an individual square of the grid
+        block_size :            length of an individual block of the snake (with respect to CELL_WIDTH)
+        direction :             current direction of the snake head
+        new_direction :         next direction of the snake head (provided by the user)
+        directions :            list of current directions for every snake's body piece7
+        tail_direction :        a vector in the direction of the motion of the snake tail
+        increase_body :         boolean to know whether increase the snake body or not
+        new_block :             stores the position where to insert the new body block
+        new_block_move :        boolean to know when to start moving new_block
+        moves_wihout_eating :   the number of cells that snake has moved without eating
+        is_virtual_snake :      a boolean to know whether the snake is virtual
+        snake_color :           snake color
+        cell_division :         number of steps needed to move from one square to another
+        iterations :            number of steps taken from the last cell       
+        EYES :                  image to display the snake eyes
+        hit_sound :             game sound
+        eating_sound :          game sound
 
     METHODS:
 
         draw_snake :                    displays the snake body using squares
         draw_intermediate_squares :     draws squares between the gaps of every block of the snake body
         move_snake :                    moves the snake body (and adds a new block when needed)
-        body_block_directions :         compute the directions attribute 
+        body_block_directions :         computes the directions attribute 
     '''
 
-    def __init__(self, color, cell_width):
+    def __init__(self, color, cell_width, virtual_snake = False):
 
         self.body = [Vector2(5,4),Vector2(4,4),Vector2(3,4)]
         self.CELL_WIDTH = cell_width
         self.block_size = int(0.8 * self.CELL_WIDTH)
+
         self.direction = Vector2(0,0)
         self.new_direction = Vector2(0,0)
         self.directions = [0, 0 , 0]
+        self.tail_direction = Vector2(1,0)
+
         self.increase_body = False
-        self.new_block = Vector2(0,0)
         self.new_block_move = False
+        self.new_block = Vector2(0,0)
+       
+        self.moves_without_eating = 0
+        self.is_virtual_snake = virtual_snake
 
         self.snake_color = color
 
-        self.step = 10
+        self.cell_division = 10
         self.iterations = 0
 
         self.EYES = pg.transform.scale(pg.transform.rotate(
@@ -71,7 +80,7 @@ class Snake:
             pg.draw.rect(WINDOW, COLORS[self.snake_color], body_rect)
 
             if i != 0:
-
+                
                 #Filling the gaps between every square
                 self.draw_intermediate_squares(WINDOW, i, 2, coordinate_transform, args)
 
@@ -131,35 +140,49 @@ class Snake:
             at the centre, we check for new directions.
             
             In order to make the motion
-            more continuous we divide each cell into a number of steps (self.step) and we
-            increase the position by 1/steps every iteration.
+            more continuous we divide each cell into a number of divisions (self.cell_division) and we
+            increase the position by 1/self.cell_division every iteration.
         '''
         #Snake (head) not at the centre of the cell
-        if self.iterations < self.step:
 
-            for i in range(len(self.body)):
-
-                self.body[i] += self.directions[i] / self.step
-
-            self.iterations += 1
-
-        #Snake (head) exactly at the centre of the cell
-        else:
-
-            #Checking if we have to increase the body
+        if self.is_virtual_snake:
             if self.increase_body == True:
+                body_copy = self.body[:]
+                body_copy.insert(0, body_copy[0] + self.direction)
+                self.body = body_copy[:]
+                self.increase_body = False
 
-                if self.new_block_move == True:
-                    self.body.append(self.new_block)
-                    self.increase_body = False
-                    self.new_block_move = False
+            else:
+                tail_prev_pos = self.body[-1]
+                body_copy = self.body[:-1]
+                body_copy.insert(0,body_copy[0] + self.direction)
+                self.body = body_copy[:]
+                tail_new_pos = self.body[-1]
+                self.tail_direction = tail_new_pos - tail_prev_pos
 
-                self.new_block_move = True
+        else:
+            if self.iterations < self.cell_division:
+                for i in range(len(self.body)):
+                    self.body[i] += self.directions[i] / self.cell_division
 
-            self.direction = self.new_direction
-            self.body_block_direction()
-            self.iterations = 0
-            self.move_snake()
+                self.iterations += 1
+
+            #Snake (head) exactly at the centre of the cell
+            else:
+
+                #Checking if we have to increase the body
+                if self.increase_body == True:
+                    if self.new_block_move == True:
+                        self.body.append(self.new_block)
+                        self.increase_body = False
+                        self.new_block_move = False
+
+                    self.new_block_move = True
+
+                self.direction = self.new_direction
+                self.body_block_direction()
+                self.iterations = 0
+                self.move_snake()
 
     def body_block_direction(self):
 
@@ -178,5 +201,3 @@ class Snake:
             directions[i] = self.body[i-1] - self.body[i]
 
         self.directions = directions
-
-
