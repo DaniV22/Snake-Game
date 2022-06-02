@@ -4,6 +4,7 @@ import itertools
 
 from snake import Snake
 from fruit import Fruit
+from pathfinder import Pathfinder
 from button import Button
 from dimmer import Dimmer
 from settings import Settings
@@ -17,7 +18,8 @@ game_variables = {'FAST' : 85, 'NORMAL': 65, 'SLOW': 50,
  'BIG': [19, 17], 'MEDIUM': [12, 11], 'SMALL': [8, 8],
   'THREE': 3, 'TWO': 2, 'ONE': 1,
    'RED_MAP': ['RED', 'WHITE'], 'GREEN_MAP': ['GREEN', 'DARK_GREEN'], 'BLUE_MAP': ['BLUE', 'LIGHT_BLUE'],
-   'YELLOW': 'YELLOW', 'RED': 'RED', 'BLUE': 'BLUE'}
+   'YELLOW': 'YELLOW', 'RED': 'RED', 'BLUE': 'BLUE',
+   'YES': True, 'NO': False}
 
 class Game:
 
@@ -26,33 +28,35 @@ class Game:
 
     ATTRIBUTES:
 
-        game_variables : a list of the option values chosen by the user (or default)
-        WINDOW : the window in which the game is displayed
-        WINDOW_SIZE : the size (pixels) of the self.WINDOW object
-        X_SQUARES, Y_SQUARES : number of squares in the game board in the X and Y directions
-        _ IMAGES : some images in the game
-        snake : Snake object
-        fruit : Fruit object
-            fruit.new_pos : sets up a random position for the fruit(s)
-        
-        play_again_object : a button object associated with PLAY_AGAIN_IMAGE
-        exit_button : a button object associated with the EXIT_IMAGE
-        settings : a Settings object
-        dim : a dimmer object
-        playing : boolean to know if the game continues or not
-        display_settings : boolean to know if displaying the settings or not
-        victory : a sound played when you win the game
+        game_variables :        a list of the option values chosen by the user (or default)
+        WINDOW :                the window in which the game is displayed
+        WINDOW_SIZE :           the size (pixels) of the self.WINDOW object
+        X_SQUARES, Y_SQUARES :  number of squares in the game board in the X and Y directions
+        CELL_WIDTH :            the size of the cells in the game board
+        autopilot :             boolean to know if the snake is controlled by the algorithm (pathfinder) or not
+        _ IMAGES :              some images in the game
+        snake :                 Snake object
+        fruit :                 Fruit object
+        pathfinder :            Pathfinder algorithm
+        fruit.new_pos :         sets up a random position for the fruit(s)
+        play_again_object :     a button object associated with PLAY_AGAIN_IMAGE
+        exit_button :           a button object associated with the EXIT_IMAGE
+        settings :              a Settings object
+        dim :                   a dimmer object
+        playing :               boolean to know if the game continues or not
+        display_settings :      boolean to know if displaying the settings or not
+        victory :               a sound played when you win the game
 
     METHODS:
 
-        draw_window : calls every drawing method7
-        draw_grid : draws a grid of a specific color and size
-        fruit_collision : handles the collisions with the fruits (a.k.a eating)
-        snake_dead : checks if the snake collides with the borders or itself
-        game_won : checks if the player's got the max. score
-        ending : displays a little menu to know if playing again or ending the game
-        update : updates every game event and dynamics
-        draw_score : draws the current score of the player
+        draw_window :       calls every drawing method7
+        draw_grid :         draws a grid of a specific color and size
+        fruit_collision :   handles the collisions with the fruits (a.k.a eating)
+        snake_dead :        checks if the snake collides with the borders or itself
+        game_won :          checks if the player's got the max. score
+        ending :            displays a little menu to know if playing again or ending the game
+        update :            updates every game event and dynamics
+        draw_score :        draws the current score of the player
 
     '''
 
@@ -64,6 +68,7 @@ class Game:
         self.X_SQUARES, self.Y_SQUARES = self.game_variables[1]
         self.CELL_WIDTH = max(int(self.WINDOW_SIZE / (self.X_SQUARES + 1)),int(
             (self.WINDOW_SIZE - 50) /(self.Y_SQUARES + 1)))
+        self.autopilot = self.game_variables[-1]
 
         self.SCORE_IMAGE = pg.transform.scale(pg.image.load('images/food_image.png'), (55, 55))
         self.PLAY_AGAIN_IMAGE = pg.transform.scale(pg.image.load('images/play_again.png'), (150, 90))
@@ -72,6 +77,7 @@ class Game:
 
         self.snake = Snake(self.game_variables[4], self.CELL_WIDTH)
         self.fruit = Fruit(self.game_variables[2], self.CELL_WIDTH)
+        self.pathfinder = Pathfinder(self.X_SQUARES, self.Y_SQUARES, self.CELL_WIDTH)
         self.fruit.new_pos(self.snake.body, self.X_SQUARES, self.Y_SQUARES)
 
         self.play_again_button = Button(self.PLAY_AGAIN_IMAGE)
@@ -141,6 +147,7 @@ class Game:
                 self.snake.increase_body = True
                 self.snake.eating_sound.play()
                 self.fruit.new_pos(self.snake.body, self.X_SQUARES, self.Y_SQUARES)
+                self.snake.moves_without_eating = 0
 
     def snake_dead(self):
 
@@ -174,7 +181,6 @@ class Game:
         '''
         Displays a little self.WINDOW to know if playing again or ending the game. 
         Also shows the score obtainded by the player
-
         '''
 
         args = [self.WINDOW_SIZE, self.X_SQUARES, self.Y_SQUARES, self.CELL_WIDTH]
@@ -182,7 +188,7 @@ class Game:
         #Darkening the background self.WINDOW
         self.dim.dim()
 
-        #Setting the position and size of the self.WINDOW
+        #Setting the position and size of the WINDOW
         WIDTH, HEIGHT = self.X_SQUARES*self.CELL_WIDTH, self.Y_SQUARES*self.CELL_WIDTH
         center = coordinate_transform(WIDTH/2, 0.8*HEIGHT/2, args)
         rect = pg.Rect(0, 0, WIDTH/ 2.1, HEIGHT / 3)
@@ -218,7 +224,6 @@ class Game:
 
         #Waiting until the snake moves
         if self.snake.direction != (0,0):
-
             self.snake.move_snake()
             self.fruit_collision()
             self.snake_dead()

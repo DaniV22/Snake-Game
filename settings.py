@@ -14,6 +14,7 @@ from colors import COLORS
 
 pg.init()
 settings_font = pg.font.SysFont('comicsans', 45)
+pathfinder_font = pg.font.SysFont('comicsans', 30)
 
 class Settings:
 
@@ -23,24 +24,26 @@ class Settings:
 
     ATTRIBUTES:
 
-        x :                 width of the menu
-        y :                 height of the menu
-        rect :              a rectangle object associated to the menu to store rectangular coordinates
-        SETTINGS_IMAGE :    image representing the settings menu
-        CLOSE_IMAGE :       image of an X mark 
-        close_button :      button object associated with CLOSE_IMAGE
-        settings_button :   button object associated with SETTINGS_IMAGE
-        option_rects :      a list to store the rectangle objects associated with the options
-        clicked :           a list to store the options that have been clicked
+        x :                    width of the menu
+        y :                    height of the menu
+        rect :                 a rectangle object associated to the menu to store rectangular coordinates
+        SETTINGS_IMAGE :       image representing the settings menu
+        CLOSE_IMAGE :          image of an X mark
+        PATHFINDER_IMAGE :     image of a robot
+        close_button :         button object associated with CLOSE_IMAGE
+        PATHFINDER_button :    button object associated with PATHFINDER_IMAGE
+        settings_button :      button object associated with SETTINGS_IMAGE
+        option_rects :         a list to store the rectangle objects associated with the options
+        clicked :              a list to store the options that have been clicked
 
     METHODS:
 
-        draw_menu : draws all the menu
-        draw_lines : draws lines around a rect. object
-        draw_sep_lines : draws lines separating the differents options
-        draw_options : displays an image associated with every option
-        check_options : calls draw_menu and cheks which options have been clicked
-        get_options : returns a list of the clicked options
+        draw_menu :         draws all the menu
+        draw_lines :        draws lines around a rect. object
+        draw_sep_lines :    draws lines separating the differents options
+        draw_options :      displays an image associated with every option
+        check_options :     calls draw_menu and cheks which options have been clicked
+        get_options :       returns a list of the clicked options
 
     '''
 
@@ -50,11 +53,13 @@ class Settings:
         self.y = 480
         self.rect = pg.Rect(100, 100, self.x, self.y)
         self.SETTINGS_IMAGE = pg.transform.scale(pg.image.load('images/settings.png'), (60, 60))
-        self.CLOSE_IMAGE = pg.transform.scale(pg.image.load('images/settings_images/CLOSE.png'), (30, 30))
+        self.CLOSE_IMAGE = pg.transform.scale(pg.image.load('images/settings_images/CLOSE.png'), (35, 35))
+        self.PATHFINDER_IMAGE = pg.transform.scale(pg.image.load('images/settings_images/pathfinder.png'), (26, 26))
         self.close_button = Button(self.CLOSE_IMAGE)
+        self.pathfinder_button = Button(self.PATHFINDER_IMAGE)
         self.settings_button = Button(self.SETTINGS_IMAGE)
         self.option_rects = []
-        self.clicked = [0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0]
+        self.clicked = [0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1]
 
     def draw_menu(self, WINDOW):
         pg.draw.rect(WINDOW, COLORS['LIGHT_BLUE'], self.rect)
@@ -81,8 +86,8 @@ class Settings:
 
         for i in range(5):
 
-            pg.draw.line(WINDOW, COLORS['BLACK'], (self.rect.left, self.rect.top + 40 + i*separation),
-             (self.rect.right, self.rect.top + 40 + i*separation), 4)
+            pg.draw.line(WINDOW, COLORS['BLACK'], (self.rect.left, self.rect.top + 45 + i*separation),
+             (self.rect.right, self.rect.top + 45 + i*separation), 4)
     
     def draw_options(self, WINDOW):
 
@@ -115,13 +120,6 @@ class Settings:
                 #Image associated with the option
                 OPTION_IMAGE = pg.transform.scale(pg.image.load(f'images/settings_images/{option}.png'), (55, 55))
 
-                '''
-                button = Button(images[i][j])
-                button.set_pos(rect_ij.bottomleft[0], rect_ij.bottomleft[1])
-                self.option_buttons.append(button)
-                OPTION_IMAGE = pg.transform.scale(pg.image.load(f'images/settings_images/{option}.png'), (55, 55))
-                '''
-
                 option_rect = pg.Rect(rect_ij.x, rect_ij.y, 55, 55)
                 WINDOW.blit(OPTION_IMAGE, option_rect)
 
@@ -137,8 +135,21 @@ class Settings:
         self.draw_menu(WINDOW)
 
         #Drawing the close button
-        self.close_button.set_pos(self.rect.topright[0] - 40, self.rect.top + 35)
+        self.close_button.set_pos(self.rect.topright[0] - 42, self.rect.top + 40)
         close_options = self.close_button.draw(WINDOW)
+
+        #Drawing the pathfinder button
+        pathfinder_surface = pathfinder_font.render('Pathfinder', 1, COLORS['BLACK'])
+        WINDOW.blit(pathfinder_surface, (self.rect.left + 10, self.rect.top - 2))
+        pathfinder_rect = pg.Rect(self.rect.left + 170, self.rect.top - 30 + 35, 35, 35)
+        self.pathfinder_button.set_pos(pathfinder_rect.left + 5, self.rect.top + 35)
+        pathdfinder_option = self.pathfinder_button.draw(WINDOW)
+
+        if self.clicked[-2]:
+            self.draw_lines(WINDOW, pathfinder_rect, 'BLACK')
+        
+        else:
+            self.draw_lines(WINDOW, pathfinder_rect, 'LIGHT_GREY')
 
         pos = pg.mouse.get_pos()    #Mouse position
 
@@ -168,6 +179,9 @@ class Settings:
             else:
                 self.draw_lines(WINDOW, option, 'LIGHT_GREY')
 
+        if pathdfinder_option:
+            self.clicked[-1], self.clicked[-2] = self.clicked[-2], self.clicked[-1]
+
         if close_options:
             return True
 
@@ -185,7 +199,7 @@ class Settings:
 
         options = ['FAST', 'NORMAL', 'SLOW', 'BIG', 'MEDIUM', 'SMALL',
         'THREE', 'TWO', 'ONE', 'RED_MAP', 'GREEN_MAP', 'BLUE_MAP', 
-        'YELLOW', 'RED', 'BLUE']
+        'YELLOW', 'RED', 'BLUE', 'YES', 'NO']
 
         return [option for i, option in enumerate(options) if self.clicked[i] == 1]
 

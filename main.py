@@ -19,8 +19,8 @@ clock = pg.time.Clock()
 #MAIN function
 def main():
 
-    #Default options (Speed, Size, Nº Fruits, Map color, Snake color)
-    default = ['NORMAL', 'MEDIUM', 'ONE', 'GREEN_MAP', 'RED']
+    #Default options (Speed, Size, Nº Fruits, Map color, Snake color, Autopilot)
+    default = ['NORMAL', 'MEDIUM', 'ONE', 'GREEN_MAP', 'RED', 'NO']
 
     #Creating game object
     game = Game(WINDOW, default)
@@ -32,16 +32,24 @@ def main():
 
         #FPS of the game 
         #(also used as the velocity of the game)
-        clock.tick(game.game_variables[0])
+        velocity = game.game_variables[0]
+
+        #Increasing the game velocity when using autopilot
+        if game.autopilot:
+            velocity += 80
+
+        clock.tick(velocity)
 
         #If the snake is not moving, user can
         # change the settings
         if game.snake.direction == (0,0):
             click_settings = game.settings.settings_button.draw(WINDOW)
             pg.time.delay(50)
-            
+
+        #Close game  
         for event in pg.event.get():
             if event.type == pg.QUIT:
+                pg.quit()
                 break
 
             #Next direction of the snake (head)
@@ -59,18 +67,34 @@ def main():
                 if event.key == pg.K_DOWN and game.snake.direction.y != -1:
                     game.snake.new_direction = Vector2(0,1)
 
-
         if game.playing == True: 
             #Checking if the snake x,y-position are integers
-            # so the snake can move to a new direction      
-            if (game.snake.body[0][0] == 
-            round(game.snake.body[0][0])) and (game.snake.body[0][1] ==
-            round(game.snake.body[0][1])):
+            # so the snake can move to a new direction
+            if (abs(game.snake.body[0][0] - round(game.snake.body[0][0])) < 0.001) and (
+                abs(game.snake.body[0][1] - round(game.snake.body[0][1])) < 0.001):
+
+                #Rounding the coordinates of the snake body to avoid
+                # decimal errors
+                for i in range(len(game.snake.body)):
+                    game.snake.body[i] = Vector2(round(game.snake.body[i][0]), round(game.snake.body[i][1]))
+
+                #Autopilot case
+                if game.autopilot:
+                
+                    #Creating the path using the pathfinder
+                    path = game.pathfinder.get_path(game.snake, game.fruit)
+
+                    if path:
+
+                        #Directions to move the snake to the neighbor location
+                        x_dir = path[0][0] - game.snake.body[0][0]
+                        y_dir = path[0][1] - game.snake.body[0][1]
+
+                    game.snake.new_direction = Vector2(x_dir, y_dir)
 
                 game.snake.direction = game.snake.new_direction
                 game.snake.body_block_direction()
-
-        
+          
             #SETTINGS WINDOW
 
             #If user click in the settings button
@@ -91,6 +115,7 @@ def main():
             else:
                 game.update()
                 game.draw_window()
+                game.snake.moves_without_eating += 1 / game.snake.cell_division
 
             pg.display.update()
 
@@ -101,6 +126,10 @@ def main():
             pg.time.delay(100)
 
             if play_again:
+
+                #Changing the Autopilot option to prevent the game
+                # from playing indefinitely
+                default[-1] = 'NO'
                 game = Game(WINDOW, default)
 
             elif exit:
